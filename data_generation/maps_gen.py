@@ -1,3 +1,5 @@
+import argparse
+
 import numpy as np
 import math
 from PIL import Image
@@ -65,25 +67,36 @@ def add_obst(current_map, map_img, current_number, file_num, obsts):
     return file_num
 
 
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--field_size', type=int, default=64, help='Size of the input/output grid.')
+    parser.add_argument('--dencity', type=float, default=0.2, help='From 0 to 1, proportion of the obstacles.')
+    parser.add_argument('--obstacles_num', type=int, default=6, help='Max number of obstacles.')
+    parser.add_argument('--dataset_size', type=int, default=500, help='Number of unique grids.')
+    parser.add_argument('--tasks_num', type=int, default=10, help='Number of tasks per grid.')
+    parser.add_argument('--indent', type=int, default=3,
+                        help='Free space width around the frame. ')
 
-field_size = 64
-dencity = 0.2
-obstacles_num = 6
-dataset = 500
-tasks_num = 1
-indent = 3
+    parsed_args = parser.parse_args()
 
-files_path = './size_' + str(field_size) + '/20_den_val/'
+    field_size = parsed_args.field_size
+    dencity = parsed_args.dencity
+    obstacles_num = parsed_args.obstacles_num
+    dataset = parsed_args.dataset_size
+    tasks_num = parsed_args.tasks_num
+    indent = parsed_args.indent
 
-os.makedirs(files_path)
-file_num = 0
-for i in range(dataset):
-    obsts = np.random.choice(np.arange(1, obstacles_num + 1))
-    #dencity = np.random.choice(np.arange(1, 3))
-    max_proportion = math.floor(math.sqrt(field_size ** 2 * dencity // 6))
-    
-   # print(obsts)
-    current_map = np.zeros((field_size, field_size)).astype('int')
-    map_img = np.ones((field_size, field_size)) * 2
-    file_num = add_obst(current_map, map_img, 0, file_num, obsts)
+    files_path = './size_' + str(field_size) + '/' + str(int(dencity * 100)) + '_den/'
+
+    os.makedirs(files_path)
+    file_num = 0
+    for i in range(dataset):
+        obsts = np.random.choice(np.arange(1, obstacles_num + 1))
+        #dencity = np.random.choice(np.arange(1, 3))
+        max_proportion = math.floor(math.sqrt(field_size ** 2 * dencity // 6))
+
+        # print(obsts)
+        current_map = np.zeros((field_size, field_size)).astype('int')
+        map_img = np.ones((field_size, field_size)) * 2
+        file_num = add_obst(current_map, map_img, 0, file_num, obsts)
 
