@@ -3,10 +3,10 @@
     <map>
         <width>16</width>
         <height>16</height>
-        <startx>2</startx>
-        <starty>14</starty>
-        <finishx>14</finishx>
-        <finishy>1</finishy>
+        <startx>14</startx>
+        <starty>2</starty>
+        <finishx>1</finishx>
+        <finishy>14</finishy>
         <grid>1
             <row>0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0</row>
             <row>0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0</row>
