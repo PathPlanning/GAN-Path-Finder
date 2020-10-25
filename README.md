@@ -72,6 +72,11 @@ Now, in order to generate ground truth images with A* paths use `path_build.py` 
 python ./data_generation/path_build.py --field_size 64 --density 0.2 --obstacles_num 5 --indent 3
 ```
 
+See examples of size 64 and density 20 data in [examples](https://github.com/PathPlanning/GAN-Path-Finder/tree/master/examples/size_64/20_den).
+
+*Train/Validation/Test split* is happening on the fly, depending on weather you train or validate the model. Our default split is 75% train, 15% validation and 10% test. When training the model is using train batch and validation batch to see progress and catch overfitting. When final evaluation is taken place, test batch of the original data is used. 
+Proportions are hardcoded in file [datasets.py](https://github.com/PathPlanning/GAN-Path-Finder/blob/master/datasets.py) and works by simply sorting input file names and splitting indices into train/val/test. Parameters could be changed directly inside the code or by specifying another dataloader - ex. if you have other maps generating procedure, that results in different structure of file names. 
+
 #### Train model
 The simplest way to train our default network (the best performing one) is to run the following command
 
@@ -99,6 +104,7 @@ As it was mentioned in [GAN Path Finder Arxiv](https://arxiv.org/abs/1908.01499)
 
 #### Validate model
 
+?? questions ??
 ```
 ./scripts/validate.sh
 ```
