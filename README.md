@@ -43,36 +43,39 @@ There are numerous types of test, that can be performed, instead of plain valida
 
 Required libraries and versions are listed in `requirements.txt`. For the convenience folder `scripts/` contain scripts for data generation, training and validation.
 
-#### Generate Synthetic dataset
+#### Generate Dataset
 
-The simplest way to generate our default dataset, which is 50000 images in size, has 64 by 64 field size and 20 % obstacle density is to run the following command
+The simplest way to generate our default dataset, which contains 100 000 of images (50 000 input images, i.e. images without the path and 50 000 ground-truth images, i.e. images with the A* path depicted) is to run the following command
 ```
 ./scripts/create_dataset.sh
 ```
-However we support generation of other datasets, where you can change field sizes, densities, etc.
-Maps and tasks to feed to the model as an input are generated using `maps_gen.py` (for rectangle obstacles) or `random_maps_gen.py` (for random obstacles, square, rectangle, round) files. 
+The resultant maps (images) will be of the size 64 by 64. Each map will be filled with randomly-sized rectangular obstacles. The obstacle density of each map will be 20% (~20% of pixels will be blocked, 80% of pixels will be free). The maximal number of obstacles on each map will be 5. For each map 10 different start-goal pairs will be chosen. Start pixel will be located close to left border of the map, goal -- close to the right border.
+
+It is possible to tweak the dataset generation (e.g. create maps of different size, with more tasks per map etc.). In this case the following scripts should be run manually.
+
+**First**, one needs to create maps without the paths (input images). This is done by invoking either `maps_gen.py` (for maps with rectangular obstacles) or `random_maps_gen.py` (for maps with obstacles of the shapes: rectangle, square, circle (which often look like diamon on a grid)) scripts in the following fashion.  
 
 ```
 python ./data_generation/maps_gen.py --field_size 64 --density 0.2 --obstacles_num 5 --indent 3 --dataset_size 5000 --tasks_num 10
 ```
-Change parameters to change the dataset: 
+The following parameters are supported: 
 + field_size - the size of the square grid (_default_ 64x64).
 + density - value from 0 to 1, the proportion of the obstacles on the grid (0.2 means ~20% of the map is obstacles).
-+ obstacles_num - maximal number of obstacle (obstacles are always rectangular in proportion 2x3, but their actual sizes are calculated according to maximal number of obstacles and density).
-+ indent - number of grid cells near the edge, where obstacles are not generated. 
++ obstacles_num - maximal number of obstacles (the actual sizes of the obstacles are calculated according to maximal number of obstacles and density).
++ indent - number of grid cells near the left/rigth edges of the map, where obstacles are not generated. In these grid columns start/goal locations will be chosen (with random vertical offset).
 + dataset_size - number of unique grids/maps with unique obstacles.
 + tasks_num - number of tasks (start/goal positions for each grid, ex. 5000 maps and 10 tasks per map makes 50000 images in the dataset).
 
-Dataset is saved in the folder `./size_{field_size}/{density * 100}_den/`, _default_ `./size_64/20_den/`.
-To generate maps with random obstacles, use `random_maps_gen.py`, most of the parameters are the same, the shape of each obstacle is chosen randomly. 
+Resultant images (with obstacles and with the start and goal pixels highlighted) will be saved to the folder `./size_{field_size}/{density * 100}_den/`, _default_ `./size_64/20_den/`. Some auxiliry files (xml files describing the path planning instances) will be generated as well. They are needed at the next step when paths should be generated for each path planning task encoded by the generated image.
 
-Now, in order to generate ground truth images with A* paths use `path_build.py` file. 
+**Second**, one needs to generate the corresponding ground-truth images, i.e. the images that besides the obstacles and the start-goal pixels show the shortest path from start to goal. To generate those images `path_build.py` script should be run. It runs A* under the hood and should be parameterized similarly to `maps_gen.py` (`random_maps_gen.py`).
 
 ```
 python ./data_generation/path_build.py --field_size 64 --density 0.2 --obstacles_num 5 --indent 3
 ```
+Technically this scipt invokes A* binary file built for Linux, which is the part of that repository (TODO: insert link). This binary takes generated xml-files as the input and ouputs the xml-files that encode the solution (=have the A* path from start to goal). The latter are further converted to images (while the xml files, both input and output, are deleted from the directory). As a result the directory will contain now pairs of images: one encoding the task (obstacles + start-goal) and the other encoding the solution (obstacles + start-goal + path from start to goal).
 
-See examples of size 64 and density 20 data in [examples](https://github.com/PathPlanning/GAN-Path-Finder/tree/master/examples/size_64/20_den).
+An examples of such a pair of images (map size 64, rectangular obstacles, density 20%) is shown here: [examples](https://github.com/PathPlanning/GAN-Path-Finder/tree/master/examples/size_64/20_den).
 
 *Train/Validation/Test split* is happening on the fly, depending on weather you train or validate the model. Our default split is 75% train, 15% validation and 10% test. When training the model is using train batch and validation batch to see progress and catch overfitting. When final evaluation is taken place, test batch of the original data is used. 
 Proportions are hardcoded in file [datasets.py](https://github.com/PathPlanning/GAN-Path-Finder/blob/master/datasets.py) and works by simply sorting input file names and splitting indices into train/val/test. Parameters could be changed directly inside the code or by specifying another dataloader - ex. if you have other maps generating procedure, that results in different structure of file names. 
