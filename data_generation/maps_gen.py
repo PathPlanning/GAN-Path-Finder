@@ -42,7 +42,7 @@ def save_map(current_map, map_img, file_num):
 
 
 
-def add_obst(current_map, map_img, current_number, file_num, obsts):
+def add_obst(current_map, map_img, current_number, file_num, obsts, random=False):
     if current_number >= obsts:
         file_num += 1
         save_map(current_map, map_img, file_num)
@@ -53,16 +53,51 @@ def add_obst(current_map, map_img, current_number, file_num, obsts):
     obst_height = 3 * proportion
     x = np.random.choice(np.arange(indent, field_size - 1 - indent - obst_height))
     y = np.random.choice(np.arange(field_size - 1 - obst_height))
-    if current_number % 2 == 0:
-        for dx in range(obst_width):
-            for dy in range(obst_height):
-                current_map[y + dy][x + dx] = 1
-                map_img[y + dy][x + dx] = 1
-    else:
-        for dx in range(obst_height):
-            for dy in range(obst_width):
-                current_map[y + dy][x + dx] = 1
-                map_img[y + dy][x + dx] = 1
+
+    type_ = 1
+    if random:
+        type_ = np.random.choice(np.arange(1, 4))
+
+    if type_ == 1:
+        if current_number % 2 == 0:
+            for dx in range(obst_width):
+                for dy in range(obst_height):
+                    current_map[y + dy][x + dx] = 1
+                    map_img[y + dy][x + dx] = 1
+        else:
+            for dx in range(obst_height):
+                for dy in range(obst_width):
+                    current_map[y + dy][x + dx] = 1
+                    map_img[y + dy][x + dx] = 1
+
+    elif type_ == 2:
+        for dx in range(obst_width // 2):
+            for dy in range(obst_height // 2):
+                if dx ** 2 + dy ** 2 < (obst_width // 2) ** 2:
+                    current_map[y + dy][x + dx] = 1
+                    map_img[y + dy][x + dx] = 1
+                    current_map[y - dy][x - dx] = 1
+                    map_img[y - dy][x - dx] = 1
+
+                    current_map[y - dy][x + dx] = 1
+                    map_img[y - dy][x + dx] = 1
+                    current_map[y + dy][x - dx] = 1
+                    map_img[y + dy][x - dx] = 1
+
+    elif type_ == 3:
+        for dx in range(obst_width // 2):
+            for dy in range(obst_height // 2):
+                if dx + dy < obst_width // 2:
+                    current_map[y + dy][x + dx] = 1
+                    map_img[y + dy][x + dx] = 1
+                    current_map[y - dy][x - dx] = 1
+                    map_img[y - dy][x - dx] = 1
+
+                    current_map[y - dy][x + dx] = 1
+                    map_img[y - dy][x + dx] = 1
+                    current_map[y + dy][x - dx] = 1
+                    map_img[y + dy][x - dx] = 1
+
     file_num = add_obst(current_map, map_img, current_number + 1, file_num, obsts)
     return file_num
 
@@ -76,6 +111,7 @@ if __name__ == '__main__':
     parser.add_argument('--tasks_num', type=int, default=10, help='Number of tasks per grid.')
     parser.add_argument('--indent', type=int, default=3,
                         help='Free space width around the frame. ')
+    parser.add_argument('--random_shapes', type=bool, default=False, help='Shapes of the obstacles.')
 
     parsed_args = parser.parse_args()
 
@@ -85,6 +121,7 @@ if __name__ == '__main__':
     dataset = parsed_args.dataset_size
     tasks_num = parsed_args.tasks_num
     indent = parsed_args.indent
+    random_shapes = parsed_args.random_shapes
 
     files_path = './size_' + str(field_size) + '/' + str(int(dencity * 100)) + '_den/'
 
@@ -98,5 +135,5 @@ if __name__ == '__main__':
         # print(obsts)
         current_map = np.zeros((field_size, field_size)).astype('int')
         map_img = np.ones((field_size, field_size)) * 2
-        file_num = add_obst(current_map, map_img, 0, file_num, obsts)
+        file_num = add_obst(current_map, map_img, 0, file_num, obsts, random_shapes)
 
