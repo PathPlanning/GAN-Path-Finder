@@ -9,8 +9,8 @@ class ImageDataset(Dataset):
     def __init__(self, root, img_size=32, mode='train', vin=False):
         self.img_size = img_size
         if not vin:
-            # self.inp_files = sorted(glob.glob('%s/*_img.png' % root), key=lambda fname: fname[:-8])
-            self.inp_files = sorted(glob.glob('%s/*[0-9].png' % root), key=lambda fname: fname[:-4])
+            self.inp_files = sorted(glob.glob('%s/*_img.png' % root), key=lambda fname: fname[:-8])
+            # self.inp_files = sorted(glob.glob('%s/*[0-9].png' % root), key=lambda fname: fname[:-4])
             self.out_files = sorted(glob.glob('%s/*_log.png' % root), key=lambda fname: fname[:-8])
 
         # print(len(self.inp_files), len(self.out_files))

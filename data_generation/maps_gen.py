@@ -7,19 +7,19 @@ import os
 import imageio
 
 def save_map(current_map, map_img, file_num):
-    start_x = np.random.randint(indent, size=(tasks_num))
-    start_y = np.random.randint(field_size - 1, size=(tasks_num))
-    finish_x = np.random.randint(field_size - indent - 1, field_size - 1, size=(tasks_num))
-    finish_y = np.random.randint(field_size - 1, size=(tasks_num))
+    start_x = np.random.randint(indent, size=tasks_num)
+    start_y = np.random.randint(field_size - 1, size=tasks_num)
+    finish_x = np.random.randint(field_size - indent - 1, field_size - 1, size=tasks_num)
+    finish_y = np.random.randint(field_size - 1, size=tasks_num)
     task = 1
     for sx, sy, fx, fy in zip(start_x, start_y, finish_x, finish_y):
         fout = open(files_path + str(file_num) + '.xml', 'w')
-        fout.write('<?xml version="1.0" encoding="UTF-8" ?>\n<root>\n    <map>\n        <width>' + \
-                   str(field_size) + '</width>\n        <height>' + \
-                   str(field_size) + '</height>\n        <startx>' + \
-                   str(sx) + '</startx>\n        <starty>' + \
-                   str(sy) + '</starty>\n        <finishx>' + \
-                   str(fx) + '</finishx>\n        <finishy>' + \
+        fout.write('<?xml version="1.0" encoding="UTF-8" ?>\n<root>\n    <map>\n        <width>' +
+                   str(field_size) + '</width>\n        <height>' +
+                   str(field_size) + '</height>\n        <startx>' +
+                   str(sx) + '</startx>\n        <starty>' +
+                   str(sy) + '</starty>\n        <finishx>' +
+                   str(fx) + '</finishx>\n        <finishy>' +
                    str(fy) + '</finishy>\n        <grid>\n')
         map_img[sy][sx] = 0
         map_img[fy][fx] = 0
@@ -28,9 +28,9 @@ def save_map(current_map, map_img, file_num):
         fout.write('        </grid>\n')
         fout.write('    </map>\n')
         alg = '    <algorithm>\n        <searchtype>astar</searchtype>\n        <metrictype>diagonal</metrictype>\n' +\
-                           '        <breakingties>g-max</breakingties>\n        <hweight>1</hweight>\n        <allowdiagonal>true</allowdiagonal>\n' +\
-                               '        <cutcorners>false</cutcorners>\n         <allowsqueeze>false</allowsqueeze>\n    </algorithm>\n' +\
-                                   '    <options>\n        <loglevel>1</loglevel>\n        <logpath />\n        <logfilename />\n    </options>\n'
+              '        <breakingties>g-max</breakingties>\n        <hweight>1</hweight>\n        <allowdiagonal>true</allowdiagonal>\n' +\
+              '        <cutcorners>false</cutcorners>\n         <allowsqueeze>false</allowsqueeze>\n    </algorithm>\n' +\
+              '    <options>\n        <loglevel>1</loglevel>\n        <logpath />\n        <logfilename />\n    </options>\n'
         fout.write(alg)
         fout.write('</root>\n')
         fout.close()
@@ -39,7 +39,6 @@ def save_map(current_map, map_img, file_num):
         map_img[sy][sx] = 2
         map_img[fy][fx] = 2
         task += 1
-
 
 
 def add_obst(current_map, map_img, current_number, file_num, obsts, random=False):
@@ -124,6 +123,7 @@ if __name__ == '__main__':
     random_shapes = parsed_args.random_shapes
 
     files_path = './size_' + str(field_size) + '/' + str(int(dencity * 100)) + '_den/'
+    print('random_shapes:', random_shapes)
 
     os.makedirs(files_path)
     file_num = 0

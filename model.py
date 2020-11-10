@@ -77,12 +77,12 @@ def init_net(net, init_type='normal', init_gain=0.02, gpu_id='cuda:0'):
 
 
 def define_G(input_nc, output_nc, ngf, norm='batch', use_dropout=False, init_type='normal', init_gain=0.02,
-             gpu_id='cuda:0', use_ce=False, ce=False, unet=False, attn=False, n_blocks=9):
+             gpu_id='cuda:0', context_encoder=False, use_ce=False,  unet=False, use_attn=False, n_blocks=9):
     net = None
     norm_layer = get_norm_layer(norm_type=norm)
-    if attn:
+    if use_attn:
         net = SAGANGenerator(input_nc, output_nc, norm_layer=norm_layer, n_blocks=n_blocks, ngf=ngf)
-    if ce:
+    if context_encoder:
         net = ContexEncoder(input_nc, output_nc, nBottleneck=4000, ngf=ngf)
     else:
         if not unet:

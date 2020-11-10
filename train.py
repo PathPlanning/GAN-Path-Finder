@@ -18,8 +18,9 @@ from model import define_D, define_G, get_scheduler, GANLoss, update_learning_ra
 
 cudnn.benchmark = True
 
-def calculate_gradient_penalty(disc, input, real_images, fake_images):
-    eta = torch.FloatTensor(real_images.size(0),1,1,1).uniform_(0,1)
+
+def calculate_gradient_penalty(disc, input, real_images, fake_images, device):
+    eta = torch.FloatTensor(real_images.size(0), 1, 1, 1).uniform_(0,1)
     eta = eta.expand(real_images.size(0), real_images.size(1), real_images.size(2), real_images.size(3))
     eta = eta.to(device)
 
@@ -42,7 +43,7 @@ def calculate_gradient_penalty(disc, input, real_images, fake_images):
     return grad_penalty
 
 
-def save_sample(batches_done, testing_data_loader, dataset_dir, result_folder):
+def save_sample(net_g, batches_done, testing_data_loader, dataset_dir, result_folder, device):
     sample = next(iter(testing_data_loader))
     samples = sample[1].to(device)
     masked_samples = sample[0].to(device)
@@ -51,13 +52,13 @@ def save_sample(batches_done, testing_data_loader, dataset_dir, result_folder):
     # Generate inpainted image
     output = net_g(masked_samples)
     gen_masks = torch.max(output, 1, keepdim=True)[1].float()
-    filled_samples = gen_masks
+    # filled_samples = gen_masks
+    filled_samples = output
     
     # Save sample
     sample = torch.cat((masked_samples.data, filled_samples.data, samples.data), -1)
     save_image(filled_samples.data, dataset_dir + ('%d.png' % batches_done), normalize=True)
     save_image(sample, result_folder + ('%d.png' % batches_done), nrow=1, normalize=True)
-
 
 
 def train(img_size=64, channels=1, num_classes=3, batch_size=32,
@@ -76,8 +77,9 @@ def train(img_size=64, channels=1, num_classes=3, batch_size=32,
     device = torch.device(gpu_id)
 
     print('===> Building models')
-    net_g = define_G(channels, num_classes, 64, 'batch', False, 'normal', 0.02, gpu_id=gpu_id, use_ce=True, ce=False,
-                     unet=False)
+    net_g = define_G(channels, num_classes, 64, 'batch', False, 'normal', 0.02,
+                     gpu_id=gpu_id, use_ce=False, use_attn=True, context_encoder=False, unet=False)
+
     net_d = define_D(channels, 64, 'basic', gpu_id=gpu_id)
 
     weight = torch.FloatTensor([1, 1, 1]).to(device)
@@ -109,10 +111,10 @@ def train(img_size=64, channels=1, num_classes=3, batch_size=32,
 
             output = net_g(real_a)
 
-            # fake_b = output
-            fake_b = torch.max(output, 1, keepdim=True)[1].float()
-            fake_path = torch.where(fake_b == 0, torch.ones_like(fake_b).to(device),
-                                    torch.zeros_like(fake_b).to(device)).to(device)
+            fake_b = output
+            # fake_b = torch.max(output, 1, keepdim=True)[1].float()
+            # fake_path = torch.where(fake_b == 0, torch.ones_like(fake_b).to(device),
+            #                         torch.zeros_like(fake_b).to(device)).to(device)
 
             ######################
             # (1) Update D network
@@ -124,26 +126,26 @@ def train(img_size=64, channels=1, num_classes=3, batch_size=32,
             # fake_ab = torch.cat((real_a, fake_b), 1)
             # fake_ab = torch.cat((real_a, fake_path), 1)
             # pred_fake = net_d.forward(fake_ab.detach())
-            # pred_fake = net_d.forward(fake_b.detach())
+            pred_fake = net_d.forward(fake_b.detach())
 
-            pred_fake = net_d.forward(fake_path.detach())
+            # pred_fake = net_d.forward(fake_path.detach())
             loss_d_fake = criterionGAN(pred_fake, False)
 
             # train with real
             # eal_ab = torch.cat((real_a, real_b), 1)
             # real_ab = torch.cat((real_a, path), 1)
             # pred_real = net_d.forward(real_ab)
-            # pred_real = net_d.forward(real_b)
+            pred_real = net_d.forward(real_b)
 
-            pred_real = net_d.forward(path)
+            # pred_real = net_d.forward(path)
             loss_d_real = criterionGAN(pred_real, True)
 
             # Combined D loss
             loss_d = (loss_d_fake + loss_d_real) * 0.5
             loss_d.backward()
 
-            # gradient_penalty = calculate_gradient_penalty(net_d, real_a.data, real_b.data, fake_b.data)
-            gradient_penalty = calculate_gradient_penalty(net_d, real_a.data, path.data, fake_path.data)
+            gradient_penalty = calculate_gradient_penalty(net_d, real_a.data, real_b.data, fake_b.data, device)
+            # gradient_penalty = calculate_gradient_penalty(net_d, real_a.data, path.data, fake_path.data, device)
             gradient_penalty.backward()
 
             optimizer_d.step()
@@ -158,16 +160,16 @@ def train(img_size=64, channels=1, num_classes=3, batch_size=32,
             # fake_ab = torch.cat((real_a, fake_b), 1)
             # fake_ab = torch.cat((real_a, fake_path), 1)
             # pred_fake = net_d.forward(fake_ab)
-            # pred_fake = net_d.forward(fake_b)
+            pred_fake = net_d.forward(fake_b)
 
-            pred_fake = net_d.forward(fake_path)
+            # pred_fake = net_d.forward(fake_path)
             loss_g_gan = criterionGAN(pred_fake, True)
 
             # Second, G(A) = B
-            loss_g_l1 = criterionL1(fake_b, real_b)
-            loss_g_ce = criterionCE(output, real_b[:, 0, ...].long()) * 10
-            loss_len = (torch.mean(path) - torch.mean(fake_path)).pow(2)
-            loss_g = loss_g_gan + loss_g_ce # + loss_len
+            loss_g_l1 = criterionL1(fake_b, real_b) * 10
+            # loss_g_ce = criterionCE(output, real_b[:, 0, ...].long()) * 10
+            # loss_len = (torch.mean(path) - torch.mean(fake_path)).pow(2)
+            loss_g = loss_g_gan + loss_g_l1  # + loss_len
 
             loss_g.backward()
 
@@ -202,8 +204,8 @@ def train(img_size=64, channels=1, num_classes=3, batch_size=32,
             input, target, mask = batch[0].to(device), batch[1].to(device), batch[2].to(device)
 
             output = net_g(input)
-            # prediction = output
-            prediction = torch.max(output, 1, keepdim=True)[1].float()
+            prediction = output
+            # prediction = torch.max(output, 1, keepdim=True)[1].float()
             mse = criterionMSE(prediction, target)
             psnr = 10 * log10(1 / (mse.item() + 1e-16))
             avg_psnr += psnr
@@ -213,7 +215,13 @@ def train(img_size=64, channels=1, num_classes=3, batch_size=32,
         print("===> Avg. PSNR: {:.4f} dB".format(avg_psnr / len(testing_data_loader)))
 
         #checkpoint
-        save_sample(epoch * len(training_data_loader) + iteration, testing_data_loader, dataset_dir, result_folder)
+        save_sample(net_g,
+                    epoch * len(training_data_loader) + iteration,
+                    testing_data_loader,
+                    dataset_dir,
+                    result_folder,
+                    device)
+
         torch.save(net_g.state_dict(), result_folder + 'generator.pt')
         torch.save(net_d.state_dict(), result_folder + 'discriminator.pt')
         np.save(result_folder + 'loss_history.npy', loss_history)
