@@ -71,13 +71,13 @@ def init_weights(net, init_type='normal', gain=0.02):
         net.apply(init_func)
 
 
-def init_net(net, init_type='normal', init_gain=0.02, gpu_id='cuda:0'):
+def init_net(net, init_type='normal', init_gain=0.02, device='cuda:0'):
     init_weights(net, init_type, gain=init_gain)
-    return net
+    return net.to(device)
 
 
 def define_G(input_nc, output_nc, ngf, norm='batch', use_dropout=False, init_type='normal', init_gain=0.02,
-             gpu_id='cuda:0', context_encoder=False, use_ce=False,  unet=False, use_attn=False, n_blocks=9):
+             device='cuda:0', context_encoder=False, use_ce=False,  unet=False, use_attn=False, n_blocks=9):
     net = None
     norm_layer = get_norm_layer(norm_type=norm)
     if use_attn:
@@ -91,7 +91,7 @@ def define_G(input_nc, output_nc, ngf, norm='batch', use_dropout=False, init_typ
         else:
             net = UnetGenerator(input_nc, output_nc, 6, ngf, norm_layer=norm_layer,
                                 use_dropout=use_dropout, use_ce=use_ce)
-    return init_net(net, init_type, init_gain, gpu_id)
+    return init_net(net, init_type, init_gain, device)
 
 
 # Defines the generator that consists of Resnet blocks between a few
@@ -297,7 +297,7 @@ class Outconv(nn.Module):
 
 
 def define_D(input_nc, ndf, netD, n_layers_D=3, norm='batch', use_sigmoid=False,
-             init_type='normal', init_gain=0.02, gpu_id='cuda:0'):
+             init_type='normal', init_gain=0.02, device='cuda:0'):
     net = None
     norm_layer = get_norm_layer(norm_type=norm)
 
@@ -313,7 +313,7 @@ def define_D(input_nc, ndf, netD, n_layers_D=3, norm='batch', use_sigmoid=False,
     else:
         raise NotImplementedError('Discriminator model name [%s] is not recognized' % net)
 
-    return init_net(net, init_type, init_gain, gpu_id)
+    return init_net(net, init_type, init_gain, device)
 
 
 class UnetGenerator(nn.Module):

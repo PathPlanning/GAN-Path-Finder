@@ -12,6 +12,7 @@ import torch.backends.cudnn as cudnn
 from torch.autograd import Variable
 from torch import autograd
 from torchvision.utils import save_image
+from torchvision import transforms
 
 from datasets import ImageDataset
 from model import define_D, define_G, get_scheduler, GANLoss, update_learning_rate
@@ -57,7 +58,7 @@ def save_sample(net_g, batches_done, testing_data_loader, dataset_dir, result_fo
     
     # Save sample
     sample = torch.cat((masked_samples.data, filled_samples.data, samples.data), -1)
-    save_image(filled_samples.data, dataset_dir + ('%d.png' % batches_done), normalize=True)
+    # save_image(filled_samples.data, dataset_dir + ('%d.png' % batches_done), normalize=True)
     save_image(sample, result_folder + ('%d.png' % batches_done), nrow=1, normalize=True)
 
 
@@ -67,20 +68,27 @@ def train(img_size=64, channels=1, num_classes=3, batch_size=32,
 
     os.makedirs(result_folder, exist_ok=True)
 
+    transform = transforms.Compose([
+                                    # transforms.ToPILImage(),
+                                    # transforms.Resize((img_size, img_size)), 
+                                    # transforms.ToTensor(), 
+                                    transforms.Normalize([0.5], [0.5])
+                                    ])
+
     # Dataset loader
-    training_data_loader = DataLoader(ImageDataset(dataset_dir, img_size=img_size),
+    training_data_loader = DataLoader(ImageDataset(dataset_dir, img_size=img_size, transform=transform),
                                       batch_size=batch_size, shuffle=True)
-    testing_data_loader = DataLoader(ImageDataset(dataset_dir, mode='val', img_size=img_size),
+    testing_data_loader = DataLoader(ImageDataset(dataset_dir, mode='val', img_size=img_size, transform=transform),
                                      batch_size=6, shuffle=True, num_workers=1)
 
-    gpu_id = 'cuda:3'
-    device = torch.device(gpu_id)
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = 'cuda:1'
 
     print('===> Building models')
     net_g = define_G(channels, num_classes, 64, 'batch', False, 'normal', 0.02,
-                     gpu_id=gpu_id, use_ce=False, use_attn=True, context_encoder=False, unet=False)
+                     device=device, use_ce=False, use_attn=True, context_encoder=False, unet=False)
 
-    net_d = define_D(channels, 64, 'basic', gpu_id=gpu_id)
+    net_d = define_D(channels, 64, 'basic', device=device)
 
     weight = torch.FloatTensor([1, 1, 1]).to(device)
 
@@ -100,6 +108,7 @@ def train(img_size=64, channels=1, num_classes=3, batch_size=32,
     net_d_scheduler = get_scheduler(optimizer_d, lr_policy)
 
     loss_history = {'G': [], 'D': [], 'p': [], 'adv': [], 'valPSNR': []}
+    best_PSNR = 0
 
     for epoch in range(epoch_count, niter + niter_decay + 1):
         # train
@@ -214,17 +223,28 @@ def train(img_size=64, channels=1, num_classes=3, batch_size=32,
         # print(len(testing_data_loader))
         print("===> Avg. PSNR: {:.4f} dB".format(avg_psnr / len(testing_data_loader)))
 
-        #checkpoint
-        save_sample(net_g,
-                    epoch * len(training_data_loader) + iteration,
-                    testing_data_loader,
-                    dataset_dir,
-                    result_folder,
-                    device)
+        if loss_history['valPSNR'][-1] > best_PSNR:
+            #checkpoint
+            best_PSNR = loss_history['valPSNR'][-1]
+            torch.save(net_g.state_dict(), result_folder + 'generator.pt')
+            torch.save(net_d.state_dict(), result_folder + 'discriminator.pt')
 
-        torch.save(net_g.state_dict(), result_folder + 'generator.pt')
-        torch.save(net_d.state_dict(), result_folder + 'discriminator.pt')
-        np.save(result_folder + 'loss_history.npy', loss_history)
+        if epoch % 10 == 1:
+            save_sample(net_g,
+                        epoch * len(training_data_loader) + iteration,
+                        testing_data_loader,
+                        dataset_dir,
+                        result_folder,
+                        device)
+            np.save(result_folder + 'loss_history.npy', loss_history)
+
+    save_sample(net_g,
+                epoch * len(training_data_loader) + iteration,
+                testing_data_loader,
+                dataset_dir,
+                result_folder,
+                device)
+    np.save(result_folder + 'loss_history.npy', loss_history)
 
 
 if __name__ == '__main__':

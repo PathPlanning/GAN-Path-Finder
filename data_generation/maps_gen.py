@@ -11,7 +11,6 @@ def save_map(current_map, map_img, file_num):
     start_y = np.random.randint(field_size - 1, size=tasks_num)
     finish_x = np.random.randint(field_size - indent - 1, field_size - 1, size=tasks_num)
     finish_y = np.random.randint(field_size - 1, size=tasks_num)
-    task = 1
     for sx, sy, fx, fy in zip(start_x, start_y, finish_x, finish_y):
         fout = open(files_path + str(file_num) + '.xml', 'w')
         fout.write('<?xml version="1.0" encoding="UTF-8" ?>\n<root>\n    <map>\n        <width>' +
@@ -38,13 +37,15 @@ def save_map(current_map, map_img, file_num):
         imageio.imwrite(files_path + str(file_num) + "_img.png", map_img.astype('uint8'))
         map_img[sy][sx] = 2
         map_img[fy][fx] = 2
-        task += 1
+        file_num += 1
+    
+    return file_num
 
 
 def add_obst(current_map, map_img, current_number, file_num, obsts, random=False):
     if current_number >= obsts:
         file_num += 1
-        save_map(current_map, map_img, file_num)
+        file_num = save_map(current_map, map_img, file_num)
         return file_num
     
     proportion = np.random.choice(np.arange(1, max_proportion + 1))
@@ -111,6 +112,7 @@ if __name__ == '__main__':
     parser.add_argument('--indent', type=int, default=3,
                         help='Free space width around the frame. ')
     parser.add_argument('--random_shapes', type=bool, default=False, help='Shapes of the obstacles.')
+    parser.add_argument('--theta', type=bool, default=False, help='If theta.')
 
     parsed_args = parser.parse_args()
 
@@ -121,8 +123,13 @@ if __name__ == '__main__':
     tasks_num = parsed_args.tasks_num
     indent = parsed_args.indent
     random_shapes = parsed_args.random_shapes
-
-    files_path = './size_' + str(field_size) + '/' + str(int(dencity * 100)) + '_den/'
+    theta = parsed_args.theta
+    
+    if not theta:
+        files_path = './size_' + str(field_size) + '/' + str(int(dencity * 100)) + '_den/'
+    else: 
+        files_path = './size_' + str(field_size) + '/' + str(int(dencity * 100)) + '_den_non_theta/'
+    
     print('random_shapes:', random_shapes)
 
     os.makedirs(files_path)
